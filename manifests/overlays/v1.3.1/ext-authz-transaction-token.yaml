@@ -13,7 +13,7 @@ spec:
       backendRef:
         name: transaction-token-ext-authz
         port: 9000
-      failureMode: Deny
+      failureMode: FailClose
       http:
         allowedRequestHeaders:
           - txn-token
