@@ -1,0 +1,25 @@
+apiVersion: core.orka.ai/v1alpha1
+kind: OutboundAccessPolicy
+metadata:
+  name: agentgateway
+  namespace: default
+spec:
+  gateway:
+    serviceRef:
+      name: agentgateway
+      namespace: agentgateway-system
+      port: 8080
+    scheme: http
+---
+apiVersion: core.orka.ai/v1alpha1
+kind: Tool
+metadata:
+  name: downstream-api
+  namespace: default
+spec:
+  description: Calls a downstream API through agentgateway
+  http:
+    url: https://api.example.test/v1/resource
+    method: POST
+    outboundAccessPolicyRef:
+      name: agentgateway

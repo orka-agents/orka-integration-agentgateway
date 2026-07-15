@@ -1,0 +1,8 @@
+# Request-shape fixture for an Entra on-behalf-of exchange. Use only with mock
+# infrastructure unless LIVE_ENTRA_OBO=true is explicitly configured in CI.
+grant_type: urn:ietf:params:oauth:grant-type:jwt-bearer
+requested_token_use: on_behalf_of
+scope: api://downstream/.default
+assertion: ${SYNTHETIC_ASSERTION}
+client_id: ${CLIENT_ID}
+client_secret: ${CLIENT_SECRET}

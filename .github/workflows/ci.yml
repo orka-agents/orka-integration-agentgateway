@@ -1,0 +1,15 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - run: bash -n scripts/*.sh
+      - run: scripts/check-redaction.sh
+      - run: test -s manifests/overlays/v1.3.1/kustomization.yaml
