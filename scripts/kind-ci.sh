@@ -7,10 +7,8 @@ cluster="${KIND_CLUSTER_NAME:-orka-agentgateway-integration}"
 workdir="$(mktemp -d)"
 trap 'kind delete cluster --name "${cluster}" >/dev/null 2>&1 || true; rm -rf "${workdir}"' EXIT
 kind create cluster --name "${cluster}" --wait 120s
-kubectl apply -k "${root}/manifests/overlays/${AGENTGATEWAY_VERSION}" || {
-  echo 'agentgateway manifest overlay requires refresh for this pinned release' >&2
-  exit 1
-}
+kubectl apply -k "${root}/manifests/overlays/${AGENTGATEWAY_VERSION}"
+"${root}/scripts/install-agentgateway.sh" "${workdir}"
 if [[ -n "${ORKA_CHART_PATH:-}" ]]; then
   chart="${ORKA_CHART_PATH}"
 else

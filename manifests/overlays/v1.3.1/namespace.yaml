@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentgateway-system
+  labels:
+    app.kubernetes.io/part-of: orka-integration-agentgateway
+    orka.ai/agentgateway-version: v1.3.1
