@@ -1,0 +1,19 @@
+# Version-specific agentgateway backend-auth shape. The referenced Secret is a
+# synthetic fixture in CI; production credentials must be provisioned out of band.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: downstream-resource-auth
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: downstream-api
+  backend:
+    auth:
+      key: downstream-resource-token
+      location:
+        header:
+          name: Authorization
+          prefix: "Bearer "
