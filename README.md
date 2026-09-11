@@ -167,8 +167,8 @@ The test exercises HTTP Tool execution and Orka's health endpoint. It does not r
 | File or directory | Start here to... |
 | --- | --- |
 | [Orka policy and Tool example](examples/outbound-access-policy.yaml) | Connect an HTTP Tool to the gateway. |
-| [Gateway routes](manifests/overlays/v1.3.1/routes.yaml) | Choose which hostnames and paths reach each service. |
-| [API credential policy](manifests/overlays/v1.3.1/backend-resource-auth.yaml) | Configure the Secret used for the destination API's credential. |
-| [Incoming authorization policy](manifests/overlays/v1.3.1/ext-authz-transaction-token.yaml) | Connect the gateway to a token-checking service. |
+| [Gateway routes](manifests/overlays/v1.5.0/routes.yaml) | Choose which hostnames and paths reach each service. |
+| [API credential policy](manifests/overlays/v1.5.0/backend-resource-auth.yaml) | Configure the Secret used for the destination API's credential. |
+| [Incoming authorization policy](manifests/overlays/v1.5.0/ext-authz-transaction-token.yaml) | Connect the gateway to a token-checking service. |
 | [Detailed flows](docs/flows.md) and [compatibility requirements](docs/compatibility.md) | Understand the protocol details, tested versions, and namespace rules. |
 | [Contributing](CONTRIBUTING.md) | Run the checks before changing this integration. |

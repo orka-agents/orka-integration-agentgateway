@@ -3,10 +3,10 @@
 | Component | Selected version |
 |---|---|
 | Orka | `main`, with `ORKA_REF` accepting a branch, tag, or exact commit |
-| Orka baseline | [`55cb3d5232b4`](https://github.com/orka-agents/orka/commit/55cb3d5232b4a9b697e72471e346c0a6493d4c21) |
+| Orka baseline | [`ef4dd50aab8e`](https://github.com/orka-agents/orka/commit/ef4dd50aab8e9b46e283f631860719721655b76a) |
 | Orka chart | `manifest_staging/charts/orka` from the selected revision |
-| agentgateway | v1.3.1, using published OCI charts pinned by digest |
-| Gateway API | v1.6.0, experimental channel |
+| agentgateway | [v1.5.0](https://github.com/agentgateway/agentgateway/releases/tag/v1.5.0), using published OCI charts pinned by digest |
+| Gateway API | v1.6.1, experimental channel |
 | CI Kubernetes | v1.33.7, Kind node image pinned by digest |
 
 Defaults are in [versions.env](../versions.env). Caller values take precedence. Changing agentgateway requires a matching versioned overlay and both chart digests.
@@ -21,8 +21,8 @@ The installer supplies immutable controller and publisher image references, a sn
 
 ## agentgateway requirements
 
-Use the published OCI charts. The source-tree chart contains development image versions. The v1.3.1 controller watches `TCPRoute` v1alpha2, which Gateway API v1.6.0 serves in its experimental bundle. The standard bundle serves only `TCPRoute` v1 and leaves this controller unable to sync. Agentgateway's [tagged installation target](https://github.com/agentgateway/agentgateway/blob/v1.3.1/controller/Makefile#L596-L607) also selects the experimental channel.
+Use the published OCI charts. The source-tree chart contains development image versions. The v1.5.0 controller uses `TCPRoute` v1. This integration matches agentgateway's [Gateway API v1.6.1 dependency](https://github.com/agentgateway/agentgateway/blob/v1.5.0/go.mod) and the experimental channel selected by its [tagged installation target](https://github.com/agentgateway/agentgateway/blob/v1.5.0/controller/Makefile#L609-L621).
 
 Install the Gateway API CRDs before starting the controller. Use a fresh test cluster if it already has the standard channel; Gateway API's admission policy blocks switching to experimental by default.
 
-The overlay uses v1.3.1's `failureMode: FailClosed` and `backend.auth.secretRef`. The downstream credential Secret must be named `downstream-resource-token` in `orka-system`, with the credential under its `Authorization` key. The test installer provisions it with synthetic data.
+The v1.5.0 overlay uses `failureMode: FailClosed` and `backend.auth.secretRef`. The downstream credential Secret must be named `downstream-resource-token` in `orka-system`, with the credential under its `Authorization` key. The test installer provisions it with synthetic data.

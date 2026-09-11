@@ -1,0 +1,20 @@
+# Provision downstream-resource-token out of band in orka-system. Its
+# Authorization key holds the resource token, optionally prefixed with "Bearer ".
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: downstream-resource-auth
+  namespace: orka-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: downstream-api
+  backend:
+    auth:
+      secretRef:
+        name: downstream-resource-token
+      location:
+        header:
+          name: Authorization
+          prefix: "Bearer "
