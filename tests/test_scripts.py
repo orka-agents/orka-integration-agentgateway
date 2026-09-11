@@ -1,8 +1,11 @@
-"""Exercise revision selection and cluster ownership without touching a cluster."""
+"""Exercise installation and cluster ownership without touching a cluster."""
 
+import base64
+import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,7 +38,7 @@ class ScriptTests(unittest.TestCase):
             executable = self.bin / name
             executable.write_text(
                 f"#!{sys.executable}\n"
-                "import json, os, pathlib, sys\n"
+                "import base64, json, os, pathlib, sys\n"
                 "name = pathlib.Path(sys.argv[0]).name\n"
                 "args = sys.argv[1:]\n"
                 "with open(os.environ['TEST_CALLS'], 'a') as log:\n"
@@ -46,6 +49,19 @@ class ScriptTests(unittest.TestCase):
                 "    sys.exit(42)\n"
                 "elif name == 'kubectl' and args == ['config', 'current-context']:\n"
                 "    print(os.environ.get('TEST_CONTEXT', 'kind-integration-test'))\n"
+                "elif name == 'kubectl' and args[:6] == ['-n', 'orka-system', 'create', 'secret', 'tls', 'orka-webhook-tls']:\n"
+                "    data = {}\n"
+                "    for flag, key in [('--cert=', 'tls.crt'), ('--key=', 'tls.key')]:\n"
+                "        path = next(arg[len(flag):] for arg in args if arg.startswith(flag))\n"
+                "        data[key] = base64.b64encode(pathlib.Path(path).read_bytes()).decode()\n"
+                "    print(json.dumps({'kind': 'Secret', 'metadata': {'name': 'orka-webhook-tls'}, 'data': data}))\n"
+                "elif name == 'kubectl' and args == ['apply', '-f', '-'] and 'TEST_TLS_SECRET' in os.environ:\n"
+                "    manifest = sys.stdin.read()\n"
+                "    if manifest:\n"
+                "        pathlib.Path(os.environ['TEST_TLS_SECRET']).write_text(manifest)\n"
+                "elif name == 'kubectl' and args[:5] == ['-n', 'orka-system', 'get', 'secret', 'orka-webhook-tls']:\n"
+                "    if '-o' in args:\n"
+                "        print(json.loads(pathlib.Path(os.environ['TEST_TLS_SECRET']).read_text())['data']['tls.crt'])\n"
                 "elif name == 'git' and 'fetch' in args:\n"
                 "    sys.exit(43)\n"
             )
@@ -106,6 +122,55 @@ class ScriptTests(unittest.TestCase):
         self.assertNotEqual(scoped_config, self.env["KUBECONFIG"])
         self.assertEqual(Path(self.env["KUBECONFIG"]).read_text(), original)
         self.assertFalse(any(call[0] == "kubectl" for call in self.calls()))
+
+    def test_failed_cluster_creation_is_cleaned_up(self):
+        result = self.run_script("kind-ci.sh")
+        self.assertEqual(result.returncode, 42)
+        self.assertEqual(self.calls()[-1], ["kind", "delete", "cluster", "--name", "integration-test"])
+
+    def test_reinstall_refreshes_webhook_certificate_and_rollout_annotation(self):
+        real_openssl = shutil.which("openssl")
+        (self.bin / "openssl").unlink()
+        (self.bin / "openssl").symlink_to(real_openssl)
+        source = self.directory / "orka"
+        crds = source / "manifest_staging/charts/orka/crds"
+        crds.mkdir(parents=True)
+        (crds / "outboundaccesspolicy-customresourcedefinition.yaml").touch()
+        library = source / "scripts/lib"
+        library.mkdir(parents=True)
+        (library / "kind-local-registry.sh").write_text(
+            'orka_kind_registry_push() { printf "%s@sha256:%064d\\n" "$2" 0; }\n'
+        )
+        namespace_script = library / "ensure-static-mode-namespace.sh"
+        namespace_script.write_text("#!/usr/bin/env bash\nexit 0\n")
+        namespace_script.chmod(0o755)
+        secret = self.directory / "tls-secret.json"
+        old_cert = base64.b64encode(b"stale test certificate").decode()
+        secret.write_text(json.dumps({"data": {"tls.crt": old_cert}}))
+        self.env.update(ORKA_KIND_REGISTRY_ADDR="127.0.0.1:5000", TEST_TLS_SECRET=str(secret))
+
+        for _ in range(2):
+            result = self.run_script("install-orka.sh", str(source), str(self.directory))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            cert = json.loads(secret.read_text())["data"]["tls.crt"]
+            self.assertNotEqual(cert, old_cert)
+            certificate = self.directory / "installed.crt"
+            certificate.write_bytes(base64.b64decode(cert))
+            subprocess.run(
+                [real_openssl, "x509", "-in", str(certificate), "-noout", "-checkend", "3600"],
+                text=True, capture_output=True, check=True,
+            )
+            for hostname in ("orka-webhook.orka-system.svc", "orka-webhook.orka-system.svc.cluster.local"):
+                identity = subprocess.run(
+                    [real_openssl, "x509", "-in", str(certificate), "-noout", "-checkhost", hostname],
+                    text=True, capture_output=True, check=True,
+                )
+                self.assertIn("does match certificate", identity.stdout)
+            values = (self.directory / "orka-values.yaml").read_text()
+            self.assertIn(f"  caBundle: {cert}\n", values)
+            checksum = hashlib.sha256(certificate.read_bytes()).hexdigest()
+            self.assertIn(f'  orka.ai/webhook-certificate-sha256: "{checksum}"\n', values)
+            old_cert = cert
 
     def test_release_chart_is_rejected_before_build_or_install(self):
         self.env.update(ORKA_CHART_PATH=str(self.directory / "old-chart"), ORKA_KIND_REGISTRY_ADDR="127.0.0.1:5000")

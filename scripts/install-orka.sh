@@ -35,17 +35,21 @@ if ! kubectl -n orka-system get secret agent-execution-snapshot-key >/dev/null 2
   kubectl -n orka-system create secret generic agent-execution-snapshot-key \
     --from-file="key=${workdir}/snapshot-key"
 fi
-if ! kubectl -n orka-system get secret orka-webhook-tls >/dev/null 2>&1; then
-  openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
-    -subj /CN=orka-webhook.orka-system.svc \
-    -addext 'subjectAltName=DNS:orka-webhook.orka-system.svc,DNS:orka-webhook.orka-system.svc.cluster.local' \
-    -keyout "${workdir}/webhook.key" -out "${workdir}/webhook.crt" >/dev/null 2>&1
-  kubectl -n orka-system create secret tls orka-webhook-tls \
-    --cert="${workdir}/webhook.crt" --key="${workdir}/webhook.key"
-fi
+# Refresh these short-lived test credentials when reusing a cluster as well.
+openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+  -subj /CN=orka-webhook.orka-system.svc \
+  -addext 'subjectAltName=DNS:orka-webhook.orka-system.svc,DNS:orka-webhook.orka-system.svc.cluster.local' \
+  -keyout "${workdir}/webhook.key" -out "${workdir}/webhook.crt" >/dev/null 2>&1
+kubectl -n orka-system create secret tls orka-webhook-tls \
+  --cert="${workdir}/webhook.crt" --key="${workdir}/webhook.key" \
+  --dry-run=client -o yaml | kubectl apply -f -
 ca_bundle="$(kubectl -n orka-system get secret orka-webhook-tls -o jsonpath='{.data.tls\.crt}')"
+# Roll the controller so it mounts the new certificate before Helm reports ready.
+webhook_checksum="$(openssl dgst -sha256 -r "${workdir}/webhook.crt" | cut -d ' ' -f 1)"
 
 cat >"${workdir}/orka-values.yaml" <<EOF
+annotations:
+  orka.ai/webhook-certificate-sha256: "${webhook_checksum}"
 controller:
   watchNamespace: orka-system
   image:

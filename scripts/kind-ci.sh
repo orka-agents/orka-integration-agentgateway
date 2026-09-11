@@ -53,9 +53,10 @@ else
     exit 1
   fi
   export KUBECONFIG="${workdir}/kubeconfig"
+  # Own partial resources too, so a failed readiness wait still triggers cleanup.
+  created_cluster=true
   kind create cluster --name "${cluster}" --image "${KIND_NODE_IMAGE}" \
     --kubeconfig "${KUBECONFIG}" --wait 120s
-  created_cluster=true
 fi
 cluster_verified=true
 
