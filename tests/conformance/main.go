@@ -128,9 +128,23 @@ func run(gateway string, authUnavailable bool) error {
 		}
 	}}
 	payload := json.RawMessage(`{"message":"gateway-conformance"}`)
-	result, err := executor.Execute(httptrace.WithClientTrace(ctx, trace), tool, payload)
-	if err != nil {
-		return fmt.Errorf("execute Orka HTTP Tool through agentgateway: %w", err)
+	// A Programmed Gateway does not mean its HTTPRoutes have reached the data
+	// plane. Wait for this synthetic request to succeed before checking evidence.
+	readyCtx, readyCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer readyCancel()
+	var result string
+	for {
+		sentTransaction.Store(false)
+		sentAuthorization.Store(false)
+		result, err = executor.Execute(httptrace.WithClientTrace(readyCtx, trace), tool, payload)
+		if err == nil {
+			break
+		}
+		select {
+		case <-readyCtx.Done():
+			return fmt.Errorf("execute Orka HTTP Tool through agentgateway: %w", err)
+		case <-time.After(time.Second):
+		}
 	}
 	var observed struct {
 		AuthorizationReplaced bool   `json:"authorization_replaced"`
