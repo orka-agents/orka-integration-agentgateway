@@ -8,8 +8,8 @@ workdir="${1:-$(mktemp -d)}"
 cleanup=false
 if [[ $# -eq 0 ]]; then cleanup=true; fi
 trap 'if [[ "${cleanup}" == true ]]; then rm -rf "${workdir}"; fi' EXIT
-# agentgateway v1.3.1 watches TCPRoute v1alpha2, which v1.6.0 serves only in
-# the experimental bundle. Install it before starting the controller.
+# Install the experimental Gateway API bundle before starting the controller,
+# matching agentgateway's tagged installation target.
 curl --fail --silent --show-error --location \
   "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml" \
   --output "${workdir}/gateway-api.yaml"

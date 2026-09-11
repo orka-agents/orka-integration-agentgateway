@@ -184,7 +184,7 @@ class ScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.calls()
         download = next(call for call in calls if call[0] == "curl")
-        self.assertIn("https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.0/experimental-install.yaml", download)
+        self.assertIn("https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/experimental-install.yaml", download)
         gateway_api = next(i for i, call in enumerate(calls) if call[:3] == ["kubectl", "apply", "--server-side"])
         installs = [i for i, call in enumerate(calls) if call[:4] == ["helm", "upgrade", "--install", "agentgateway-crds"] or call[:4] == ["helm", "upgrade", "--install", "agentgateway"]]
         self.assertEqual(len(installs), 2)
