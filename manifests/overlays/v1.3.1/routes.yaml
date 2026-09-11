@@ -1,0 +1,42 @@
+# This fixed authority reaches the local test fixture. No public request is
+# sent to example.com, and unknown authorities have no matching route.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: downstream-api
+  namespace: orka-system
+spec:
+  parentRefs:
+    - name: orka-egress
+      sectionName: http
+  hostnames:
+    - example.com
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /v1/resource
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove:
+              - Txn-Token
+      backendRefs:
+        - name: downstream-api
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: orka
+  namespace: orka-system
+spec:
+  parentRefs:
+    - name: orka-egress
+      sectionName: http
+  hostnames:
+    - orka.example.test
+  rules:
+    - backendRefs:
+        - name: orka
+          port: 8080

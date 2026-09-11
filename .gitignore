@@ -4,3 +4,4 @@
 *.token
 kubeconfig*
 .env
+__pycache__/

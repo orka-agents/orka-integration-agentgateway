@@ -1,0 +1,90 @@
+# CI fixtures only. The ext-auth service compares a synthetic token and does
+# not verify transaction-token signatures, claims, issuer, audience, or expiry.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentgateway-fixture
+  namespace: orka-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentgateway-fixture
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentgateway-fixture
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: fixture
+          image: docker.io/library/python:3.14.7-alpine3.24@sha256:c6ead215bfd31f1e433d968853b7a769989117115b728874824e6c0a27cb96fc
+          command: [python, -B, /app/server.py]
+          ports:
+            - name: downstream
+              containerPort: 8080
+            - name: ext-authz
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: downstream
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: downstream
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+            - name: credentials
+              mountPath: /var/run/fixture
+              readOnly: true
+      volumes:
+        - name: code
+          configMap:
+            name: agentgateway-fixture
+        - name: credentials
+          secret:
+            secretName: agentgateway-fixture
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: downstream-api
+  namespace: orka-system
+spec:
+  selector:
+    app.kubernetes.io/name: agentgateway-fixture
+  ports:
+    - name: http
+      port: 8080
+      targetPort: downstream
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-token-ext-authz
+  namespace: orka-system
+spec:
+  selector:
+    app.kubernetes.io/name: agentgateway-fixture
+  ports:
+    - name: http
+      port: 9000
+      targetPort: ext-authz

@@ -2,7 +2,7 @@ apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
   name: orka-transaction-token-ext-authz
-  namespace: agentgateway-system
+  namespace: orka-system
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
@@ -13,22 +13,10 @@ spec:
       backendRef:
         name: transaction-token-ext-authz
         port: 9000
-      failureMode: FailClose
+      failureMode: FailClosed
       http:
+        path: '"/authorize"'
         allowedRequestHeaders:
           - txn-token
         allowedResponseHeaders:
           - x-orka-transaction-id
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: transaction-token-ext-authz
-  namespace: agentgateway-system
-spec:
-  selector:
-    app.kubernetes.io/name: transaction-token-ext-authz
-  ports:
-    - name: http
-      port: 9000
-      targetPort: 9000
