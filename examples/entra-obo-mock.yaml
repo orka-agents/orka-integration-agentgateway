@@ -1,5 +1,5 @@
-# Request-shape fixture for an Entra on-behalf-of exchange. Use only with mock
-# infrastructure unless LIVE_ENTRA_OBO=true is explicitly configured in CI.
+# Request fields for an Entra on-behalf-of exchange. This repository does not
+# implement an OBO endpoint or a live exchange test.
 grant_type: urn:ietf:params:oauth:grant-type:jwt-bearer
 requested_token_use: on_behalf_of
 scope: api://downstream/.default

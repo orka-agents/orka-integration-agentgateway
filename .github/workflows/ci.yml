@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - run: bash -n scripts/*.sh
+      - run: for script in scripts/*.sh; do bash -n "$script"; done
+      - run: shellcheck scripts/*.sh
+      - run: python3 -m unittest discover -s tests -v
       - run: scripts/check-redaction.sh
-      - run: test -s manifests/overlays/v1.3.1/kustomization.yaml
+      - run: kubectl kustomize manifests/base > /dev/null

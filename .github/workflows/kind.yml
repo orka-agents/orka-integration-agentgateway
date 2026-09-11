@@ -10,17 +10,25 @@ on:
 permissions:
   contents: read
 jobs:
-  scaffold:
+  conformance:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+          cache: false
       - name: Install kind
         run: |
           curl -fsSLo /tmp/kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64
           echo 'c72eda46430f065fb45c5f70e7c957cc9209402ef309294821978677c8fb3284  /tmp/kind' | sha256sum -c -
           sudo install /tmp/kind /usr/local/bin/kind
       - name: Install Helm
-        run: curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-      - env:
+        env:
+          DESIRED_VERSION: v3.19.0
+        run: curl -fsSL https://raw.githubusercontent.com/helm/helm/v3.19.0/scripts/get-helm-3 | bash
+      - name: Test Orka through agentgateway
+        env:
           ORKA_REF: ${{ inputs.orka_ref || 'main' }}
         run: scripts/kind-ci.sh
